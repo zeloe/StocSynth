@@ -24,7 +24,9 @@ StocSynthAudioProcessor::StocSynthAudioProcessor()
 {
     m_StochFactor = treeState.getRawParameterValue("StochFactor");
     m_Decimation = treeState.getRawParameterValue("Decimation");
-
+    m_Amp  = treeState.getRawParameterValue("Amp");
+    gain_BlockL = std::make_unique<Gain_Block>();
+    gain_BlockR = std::make_unique<Gain_Block>();
     sTFT = std::make_unique<STFT>();
     
     
@@ -43,10 +45,13 @@ StocSynthAudioProcessor::createParameterLayout()
     
     auto stochFactor = std::make_unique<juce::AudioParameterFloat>("StochFactor","StochFactor",0.01,0.99,0.5);
     
-    auto decimation = std::make_unique<juce::AudioParameterFloat>("Decimation","Decimation",0.01,0.99,0.5);
+    auto decimation = std::make_unique<juce::AudioParameterFloat>("Decimation","Decimation",0.01,1.0,0.5);
+    
+    auto amp = std::make_unique<juce::AudioParameterFloat>("Amp","Amp",0.01,10.0,0.5);
     
     params.push_back(std::move(stochFactor));
     params.push_back(std::move(decimation));
+    params.push_back(std::move(amp));
     return {params.begin(),params.end()};
 }
 //==============================================================================
@@ -118,7 +123,8 @@ void StocSynthAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBl
     sTFT->updateParameters(4096,
                             4,
                            3);
-    
+    gain_BlockL->prepare(samplesPerBlock);
+    gain_BlockR->prepare(samplesPerBlock);
 }
 
 void StocSynthAudioProcessor::releaseResources()
@@ -166,6 +172,12 @@ void StocSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     sTFT->processBlock(buffer);
     sTFT->updateStochfactor(*m_StochFactor);
     sTFT->updatedecimation(*m_Decimation);
+    auto left = buffer.getWritePointer(0);
+    auto right =  buffer.getWritePointer(1);
+    gain_BlockL->setGain(*m_Amp);
+    gain_BlockL->process(left);
+    gain_BlockR->setGain(*m_Amp);
+    gain_BlockR->process(right);
 }
 
 //==============================================================================
