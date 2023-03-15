@@ -88,6 +88,10 @@ public:
         outputBufferReadPosition = currentOutputBufferReadPosition;
         samplesSinceLastFFT = currentSamplesSinceLastFFT;
     }
+    void updateStochfactor(float newValue){
+        stocfactor = newValue;
+    }
+
 
 private:
     //======================================
@@ -241,7 +245,8 @@ private:
         if (currentOutputBufferWritePosition >= outputBufferLength)
             currentOutputBufferWritePosition = 0;
     }
-
+    
+  
 protected:
     std::unique_ptr<juce::dsp::Complex<float>[]> timeDomainBuffer;
     std::unique_ptr<juce::dsp::Complex<float>[]> frequencyDomainBuffer;

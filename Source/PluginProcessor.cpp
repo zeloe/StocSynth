@@ -22,7 +22,15 @@ StocSynthAudioProcessor::StocSynthAudioProcessor()
                        ),treeState(*this, nullptr, "PARAMETERS", createParameterLayout())
 #endif
 {
+    m_WindowType = treeState.getRawParameterValue("WindowType");
+    m_FFTSize = treeState.getRawParameterValue("FFTSize");
+    m_StochFactor = treeState.getRawParameterValue("StochFactor");
+    
+
     sTFT = std::make_unique<STFT>();
+    
+    
+    
 }
 
 StocSynthAudioProcessor::~StocSynthAudioProcessor()
@@ -113,9 +121,9 @@ void StocSynthAudioProcessor::changeProgramName (int index, const juce::String& 
 void StocSynthAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     sTFT->setup(2);
-    sTFT->updateParameters(2048,
+    sTFT->updateParameters(string_to_fftsize(int(*m_FFTSize)),
                             4,
-                            3);
+                           int(*m_WindowType));
     
 }
 
@@ -162,6 +170,7 @@ void StocSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
         buffer.clear (i, 0, buffer.getNumSamples());
 
     sTFT->processBlock(buffer);
+    sTFT->updateStochfactor(*m_StochFactor);
 }
 
 //==============================================================================
@@ -178,15 +187,17 @@ juce::AudioProcessorEditor* StocSynthAudioProcessor::createEditor()
 //==============================================================================
 void StocSynthAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
+    juce::MemoryOutputStream mos (destData, true);
+       treeState.state.writeToStream(mos);
 }
 
 void StocSynthAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    // You should use this method to restore your parameters from this memory block,
-    // whose contents will have been created by the getStateInformation() call.
+    auto tree = juce::ValueTree::readFromData(data, sizeInBytes);
+                                 if(tree.isValid() )
+                                 {
+                                     treeState.replaceState(tree);
+                                 }
 }
 
 //==============================================================================
