@@ -12,6 +12,7 @@
 #include "FFT_juce.h"
 #include "Parameters.h"
 #include "string_to_fftsize.h"
+#include "gain_block.h"
 //==============================================================================
 /**
 */
@@ -62,8 +63,11 @@ private:
     // create parameter layout
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     std::unique_ptr<STFT> sTFT;
+    std::unique_ptr<Gain_Block> gain_BlockL;
+    std::unique_ptr<Gain_Block> gain_BlockR;
     std::atomic<float>* m_StochFactor  = nullptr;
     std::atomic<float>* m_Decimation  = nullptr;
+    std::atomic<float>* m_Amp  = nullptr;
     
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (StocSynthAudioProcessor)
