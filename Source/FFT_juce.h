@@ -92,7 +92,7 @@ public:
         stocfactor = newValue;
     }
     void updatedecimation(float newValue){
-        decimation = newValue * 1000;
+        decimation = newValue * 100;
     }
 
 
@@ -265,7 +265,7 @@ protected:
     int numSamples;
     float stocfactor = 0.5;
     float randPhase = 0;
-    float decimation = -200;
+    float decimation = 0;
     int fftSize;
     std::unique_ptr<juce::dsp::FFT> fft;
 
