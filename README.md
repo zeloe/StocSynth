@@ -1,0 +1,2 @@
+# StocSynth
+ Spectral Modelling Synthesis
