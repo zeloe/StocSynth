@@ -22,10 +22,8 @@ StocSynthAudioProcessor::StocSynthAudioProcessor()
                        ),treeState(*this, nullptr, "PARAMETERS", createParameterLayout())
 #endif
 {
-    m_WindowType = treeState.getRawParameterValue("WindowType");
-    m_FFTSize = treeState.getRawParameterValue("FFTSize");
     m_StochFactor = treeState.getRawParameterValue("StochFactor");
-    
+    m_Decimation = treeState.getRawParameterValue("Decimation");
 
     sTFT = std::make_unique<STFT>();
     
@@ -42,17 +40,13 @@ StocSynthAudioProcessor::createParameterLayout()
     // create parameters
     // you could also use a array with strings and add them in a for loop
     std::vector <std::unique_ptr<juce::RangedAudioParameter>> params;
-   
-    auto pParam = (std::make_unique<juce::AudioParameterChoice>("WindowType","WindowType",windowType,2));
-    params.push_back(std::move(pParam));
     
-    auto pParam2 = (std::make_unique<juce::AudioParameterChoice>("FFTSize","FFTSize",FFtSizes,4));
-    params.push_back(std::move(pParam2));
+    auto stochFactor = std::make_unique<juce::AudioParameterFloat>("StochFactor","StochFactor",0.01,0.99,0.5);
     
-    auto stochFactor = std::make_unique<juce::AudioParameterFloat>("StochFactor","StochFactor",0.2,1,0.5);
+    auto decimation = std::make_unique<juce::AudioParameterFloat>("Decimation","Decimation",0.01,0.99,0.5);
     
     params.push_back(std::move(stochFactor));
-    
+    params.push_back(std::move(decimation));
     return {params.begin(),params.end()};
 }
 //==============================================================================
@@ -121,9 +115,9 @@ void StocSynthAudioProcessor::changeProgramName (int index, const juce::String& 
 void StocSynthAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     sTFT->setup(2);
-    sTFT->updateParameters(string_to_fftsize(int(*m_FFTSize)),
+    sTFT->updateParameters(4096,
                             4,
-                           int(*m_WindowType));
+                           3);
     
 }
 
@@ -171,6 +165,7 @@ void StocSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
 
     sTFT->processBlock(buffer);
     sTFT->updateStochfactor(*m_StochFactor);
+    sTFT->updatedecimation(*m_Decimation);
 }
 
 //==============================================================================

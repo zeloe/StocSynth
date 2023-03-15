@@ -91,6 +91,9 @@ public:
     void updateStochfactor(float newValue){
         stocfactor = newValue;
     }
+    void updatedecimation(float newValue){
+        decimation = newValue * 1000;
+    }
 
 
 private:
@@ -189,8 +192,9 @@ private:
         }
         
             float stocf = fftSize * stocfactor;
+            
                 for (int j = 0; j < stocf; j++) {
-                    stochEnv[j] = mX[j];
+                    stochEnv[j] = fmod(mX[j],decimation);
             }
         //interpolate
         for (int i = 0; i < fftSize /2 + 1; i++) {
@@ -204,7 +208,7 @@ private:
        
              
         for (int index = 0; index < fftSize / 2 + 1; ++index) {
-            float  randPhase = fmod(randPhase + (2 * M_PI * rand() / RAND_MAX), 2 * M_PI);
+            randPhase = fmod(randPhase + (2 * M_PI * rand() / RAND_MAX), 2 * M_PI);
             float amp = std::exp(stochEnv[index] / 20.0);
             frequencyDomainBuffer[index].real(amp * cos(randPhase));
             frequencyDomainBuffer[index].imag(amp * sin(randPhase));
@@ -260,6 +264,8 @@ protected:
     int numChannels;
     int numSamples;
     float stocfactor = 0.5;
+    float randPhase = 0;
+    float decimation = -200;
     int fftSize;
     std::unique_ptr<juce::dsp::FFT> fft;
 
