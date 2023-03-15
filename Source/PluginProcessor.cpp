@@ -19,7 +19,7 @@ StocSynthAudioProcessor::StocSynthAudioProcessor()
                       #endif
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
-                       )
+                       ),treeState(*this, nullptr, "PARAMETERS", createParameterLayout())
 #endif
 {
     sTFT = std::make_unique<STFT>();
@@ -28,7 +28,25 @@ StocSynthAudioProcessor::StocSynthAudioProcessor()
 StocSynthAudioProcessor::~StocSynthAudioProcessor()
 {
 }
-
+juce::AudioProcessorValueTreeState::ParameterLayout
+StocSynthAudioProcessor::createParameterLayout()
+{
+    // create parameters
+    // you could also use a array with strings and add them in a for loop
+    std::vector <std::unique_ptr<juce::RangedAudioParameter>> params;
+   
+    auto pParam = (std::make_unique<juce::AudioParameterChoice>("WindowType","WindowType",windowType,2));
+    params.push_back(std::move(pParam));
+    
+    auto pParam2 = (std::make_unique<juce::AudioParameterChoice>("FFTSize","FFTSize",FFtSizes,4));
+    params.push_back(std::move(pParam2));
+    
+    auto stochFactor = std::make_unique<juce::AudioParameterFloat>("StochFactor","StochFactor",0.2,1,0.5);
+    
+    params.push_back(std::move(stochFactor));
+    
+    return {params.begin(),params.end()};
+}
 //==============================================================================
 const juce::String StocSynthAudioProcessor::getName() const
 {
@@ -154,7 +172,7 @@ bool StocSynthAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* StocSynthAudioProcessor::createEditor()
 {
-    return new StocSynthAudioProcessorEditor (*this);
+    return new juce::GenericAudioProcessorEditor(*this);//new StocSynthAudioProcessorEditor (*this);
 }
 
 //==============================================================================

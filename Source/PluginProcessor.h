@@ -10,6 +10,7 @@
 
 #include <JuceHeader.h>
 #include "FFT_juce.h"
+#include "Parameters.h"
 //==============================================================================
 /**
 */
@@ -55,8 +56,10 @@ public:
     //==============================================================================
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
-
+    juce::AudioProcessorValueTreeState treeState;
 private:
+    // create parameter layout
+    juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     std::unique_ptr<STFT> sTFT;
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (StocSynthAudioProcessor)

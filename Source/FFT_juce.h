@@ -249,8 +249,8 @@ protected:
     
     std::unique_ptr<juce::dsp::Complex<float>[]> outbufferBuffer;
     std::unique_ptr<juce::dsp::Complex<float>[]> timeoutbufferBuffer;
-    float stochEnv [2048] = {0};
-    float mX[2048] = {0};
+    float stochEnv [16384] = {0};
+    float mX[16384] = {0};
      //======================================
     int numChannels;
     int numSamples;

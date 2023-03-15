@@ -4,6 +4,9 @@
               addUsingNamespaceToJuceHeader="0" displaySplashScreen="1" jucerFormatVersion="1"
               companyWebsite="CodeZen" pluginFormats="buildVST3" pluginManufacturer="CodeZen">
   <MAINGROUP id="podl6c" name="StocSynth">
+    <GROUP id="{83E1F43C-5B46-2B4D-26AF-27DB091DC683}" name="Parameters">
+      <FILE id="P7dZGv" name="Parameters.h" compile="0" resource="0" file="Source/Parameters.h"/>
+    </GROUP>
     <GROUP id="{3583D4DE-441C-E803-45EF-55D40192A014}" name="DSP">
       <FILE id="qJKlSc" name="FFT_juce.h" compile="0" resource="0" file="Source/FFT_juce.h"/>
     </GROUP>
