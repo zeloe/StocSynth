@@ -23,8 +23,9 @@ StocSynthAudioProcessor::StocSynthAudioProcessor()
 #endif
 {
     m_StochFactor = treeState.getRawParameterValue("StochFactor");
-    m_Decimation = treeState.getRawParameterValue("Decimation");
+    m_Decimation = treeState.getRawParameterValue("NoiseLevel");
     m_Amp  = treeState.getRawParameterValue("Amp");
+    m_Cutoff  = treeState.getRawParameterValue("LowCutoff");
     gain_BlockL = std::make_unique<Gain_Block>();
     gain_BlockR = std::make_unique<Gain_Block>();
     sTFT = std::make_unique<STFT>();
@@ -43,12 +44,15 @@ StocSynthAudioProcessor::createParameterLayout()
     // you could also use a array with strings and add them in a for loop
     std::vector <std::unique_ptr<juce::RangedAudioParameter>> params;
     
-    auto stochFactor = std::make_unique<juce::AudioParameterFloat>("StochFactor","StochFactor",0.01,0.99,0.5);
+    auto stochFactor = std::make_unique<juce::AudioParameterFloat>("StochFactor","StochFactor",0.1,1.0,0.5);
     
-    auto decimation = std::make_unique<juce::AudioParameterFloat>("Decimation","Decimation",0.01,1.0,0.5);
+    auto decimation = std::make_unique<juce::AudioParameterFloat>("NoiseLevel","NoiseLevel",0.0,0.10,0.05);
     
-    auto amp = std::make_unique<juce::AudioParameterFloat>("Amp","Amp",0.01,10.0,0.5);
+    auto amp = std::make_unique<juce::AudioParameterFloat>("Amp","Amp",0.01,2.0,0.5);
     
+    
+    auto filter = std::make_unique<juce::AudioParameterFloat>("LowCutoff","LowCutoff",10.0,20000.0,2000);
+    params.push_back(std::move(filter));
     params.push_back(std::move(stochFactor));
     params.push_back(std::move(decimation));
     params.push_back(std::move(amp));
@@ -120,9 +124,9 @@ void StocSynthAudioProcessor::changeProgramName (int index, const juce::String& 
 void StocSynthAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     sTFT->setup(2);
-    sTFT->updateParameters(4096,
+    sTFT->updateParameters(2048,
                             4,
-                           3);
+                           2);
     gain_BlockL->prepare(samplesPerBlock);
     gain_BlockR->prepare(samplesPerBlock);
 }
@@ -172,6 +176,7 @@ void StocSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     sTFT->processBlock(buffer);
     sTFT->updateStochfactor(*m_StochFactor);
     sTFT->updatedecimation(*m_Decimation);
+    sTFT->updatecutoff(*m_Cutoff);
     auto left = buffer.getWritePointer(0);
     auto right =  buffer.getWritePointer(1);
     gain_BlockL->setGain(*m_Amp);
