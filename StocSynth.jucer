@@ -10,6 +10,7 @@
             file="Source/string_to_fftsize.h"/>
     </GROUP>
     <GROUP id="{3583D4DE-441C-E803-45EF-55D40192A014}" name="DSP">
+      <FILE id="rQhHbp" name="Wavetabels.h" compile="0" resource="0" file="Source/Wavetabels.h"/>
       <FILE id="Lr0Zho" name="gain_block.h" compile="0" resource="0" file="Source/gain_block.h"/>
       <FILE id="qJKlSc" name="FFT_juce.h" compile="0" resource="0" file="Source/FFT_juce.h"/>
     </GROUP>
