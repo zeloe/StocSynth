@@ -12,7 +12,7 @@
 #pragma once
 
 #include "JuceHeader.h"
-
+#include "Wavetabels.h"
 //==============================================================================
 
 class STFT
@@ -204,15 +204,20 @@ private:
                     stochEnv[j] = fmod(mX[j],decifac);
                     stochphaseEnv[j] = fmod(arg(frequencyDomainBuffer[j]),decifac);
             }
-        //interpolate
+        //it isnt very efficient.... but less artifacts
         for (int i = 0; i <  fftSize / 2 + 1; i++) {
             float v0 = stochEnv[i];
             float v1 = stochEnv[i + 1];
             float v2 = stochEnv[i + 2];
             float v3 = stochEnv[i + 3];
-            stochCubicEnv[i] = cubicInterpolation(v0,v1,v2,v3,0.5);
+            for (int j = 0; j < 4; ++j) {
+                float t = static_cast<float>(j) / 3.0f;
+                stochCubicEnv[i + j] = cubicInterpolation(v0, v1, v2, v3, t);
+            }
         }
+        //still have to find a more efficient way... should pre - compute them in lists
         const float cutoffFrequency = cutoff; // choose a cutoff frequency in Hz
+        //this should get in prepare to play
         const float sampleRate = 44100.0f; // set the sample rate of the audio
         const int windowSize = fftSize / 2 - 1; // get the size of the frequency domain buffer
         // create a low-pass filter kernel using Hann window
@@ -227,13 +232,15 @@ private:
                 filterKernel[i] = hannFactor;
             }
         }
+        // * 0.1 otherwise it is too loud
         float noiseLevel = decimation * 0.1;
         for(int i = 0; i <  fftSize / 2 + 1; ++i) {
-            randPhase = fmod(randPhase + (2 * M_PI * rand() / RAND_MAX), 2 * M_PI) * noiseLevel;
+            randPhase = randomTable[i] * noiseLevel;
             float filteredPhase =randPhase* filterKernel[i]  + stochphaseEnv[i];
             filteredphase[i] = filteredPhase;
         }
-        
+        //linear interpolation didn't work as expected
+        //using cubicinterpolation
         for (int i = 0; i <  fftSize / 2 - 3 ; ++i) {
             float v0 = filteredphase[i];
             float v1 = filteredphase[i + 1];
@@ -245,14 +252,14 @@ private:
             }
         }
         
-
-        //unwrapPhase(cubicfilteredPhase, fftSize / 2 + 1);
+        //Not really sure if this is correct but a bit less sample & hold effect
+        unwrapPhase(cubicfilteredPhase, fftSize / 2 + 1);
         
         
             
         
         for (int index = 0; index < fftSize / 2 + 1; ++index) {
-            randPhase = fmod(randPhase + (2 * M_PI * rand() / RAND_MAX), 2 * M_PI)  * noiseLevel;
+            randPhase = randomTable[index]  * noiseLevel;
             float amp = std::exp(stochEnv[index] / 20.0);
             float resAmp = amp +randPhase *filterKernel[index]  ;
             
