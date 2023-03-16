@@ -94,6 +94,10 @@ public:
     void updatedecimation(float newValue){
         decimation = newValue * 100;
     }
+    
+    void updatecutoff(float newValue){
+        cutoff = newValue;
+    }
 
 
 private:
@@ -187,36 +191,79 @@ private:
     virtual void modification()
     {
         fft->perform(timeDomainBuffer.get(), frequencyDomainBuffer.get(), false);
-        for (int index = 0; index < fftSize / 2 + 1; ++index) {
+        
+        
+        //calculate magntiude spectrum
+        for (int index = 0; index < fftSize / 2 +1; ++index) {
             mX[index]= 20 * log10(abs(frequencyDomainBuffer[index]));
         }
-        
-            float stocf = fftSize * stocfactor;
-            
+        // apply stochastic function
+            float stocf = fftSize / 2 + 1 * stocfactor;
+            float decifac = stocfactor * 100;
                 for (int j = 0; j < stocf; j++) {
-                    stochEnv[j] = fmod(mX[j],decimation);
+                    stochEnv[j] = fmod(mX[j],decifac);
+                    stochphaseEnv[j] = fmod(arg(frequencyDomainBuffer[j]),decifac);
             }
         //interpolate
-        for (int i = 0; i < fftSize /2 + 1; i++) {
-          double frac = (double) i / fftSize;
-          int left_idx = floor(frac * fftSize);
-          int right_idx = ceil(frac * fftSize);
-            double left_val = stochEnv[left_idx];
-            double right_val = stochEnv[right_idx];
-            stochEnv[i] = (left_val + (right_val - left_val) * (frac - left_idx / fftSize));
+        for (int i = 0; i <  fftSize / 2 + 1; i++) {
+            float v0 = stochEnv[i];
+            float v1 = stochEnv[i + 1];
+            float v2 = stochEnv[i + 2];
+            float v3 = stochEnv[i + 3];
+            stochCubicEnv[i] = cubicInterpolation(v0,v1,v2,v3,0.5);
         }
-       
-             
+        const float cutoffFrequency = cutoff; // choose a cutoff frequency in Hz
+        const float sampleRate = 44100.0f; // set the sample rate of the audio
+        const int windowSize = fftSize / 2 - 1; // get the size of the frequency domain buffer
+        // create a low-pass filter kernel using Hann window
+
+        for (int i = 0; i < windowSize; ++i) {
+            float frequency = (float(i) / (windowSize - 1)) * sampleRate;
+            float normalizedFrequency = frequency / cutoffFrequency;
+            if (normalizedFrequency > 1.0f) {
+                filterKernel[i] = 0.0f;
+            } else {
+                float hannFactor = 0.5f * (1.0f - std::cos(2.0f * M_PI * normalizedFrequency));
+                filterKernel[i] = hannFactor;
+            }
+        }
+        float noiseLevel = decimation * 0.1;
+        for(int i = 0; i <  fftSize / 2 + 1; ++i) {
+            randPhase = fmod(randPhase + (2 * M_PI * rand() / RAND_MAX), 2 * M_PI) * noiseLevel;
+            float filteredPhase =randPhase* filterKernel[i]  + stochphaseEnv[i];
+            filteredphase[i] = filteredPhase;
+        }
+        
+        for (int i = 0; i <  fftSize / 2 - 3 ; ++i) {
+            float v0 = filteredphase[i];
+            float v1 = filteredphase[i + 1];
+            float v2 = filteredphase[i + 2];
+            float v3 = filteredphase[i + 3];
+            for (int j = 0; j < 4; ++j) {
+                float t = static_cast<float>(j) / 3.0f;
+                cubicfilteredPhase[i + j] = cubicInterpolation(v0, v1, v2, v3, t);
+            }
+        }
+        
+
+        //unwrapPhase(cubicfilteredPhase, fftSize / 2 + 1);
+        
+        
+            
+        
         for (int index = 0; index < fftSize / 2 + 1; ++index) {
-            randPhase = fmod(randPhase + (2 * M_PI * rand() / RAND_MAX), 2 * M_PI);
+            randPhase = fmod(randPhase + (2 * M_PI * rand() / RAND_MAX), 2 * M_PI)  * noiseLevel;
             float amp = std::exp(stochEnv[index] / 20.0);
-            frequencyDomainBuffer[index].real(amp * cos(randPhase));
-            frequencyDomainBuffer[index].imag(amp * sin(randPhase));
+            float resAmp = amp +randPhase *filterKernel[index]  ;
+            
+            frequencyDomainBuffer[index].real(resAmp * cosf(cubicfilteredPhase[index]));
+            frequencyDomainBuffer[index].imag(resAmp * sinf(cubicfilteredPhase[index]));
             if (index > 0 && index < fftSize / 2) {
-                frequencyDomainBuffer[fftSize - index].real(amp * cos(randPhase));
-                frequencyDomainBuffer[fftSize - index].imag(amp * sin(-randPhase));
+                frequencyDomainBuffer[fftSize - index].real(resAmp * cosf(cubicfilteredPhase[index]));
+                frequencyDomainBuffer[fftSize - index].imag(resAmp * sinf(-cubicfilteredPhase[index]));
                 }
             }
+          
             fft->perform(frequencyDomainBuffer.get(), timeoutbufferBuffer.get(), true);
     }
 
@@ -229,7 +276,17 @@ private:
         return a0 * x * x * x + a1 * x * x + a2 * x + a3;
     }
 
-
+    void unwrapPhase(float* phase, int size)
+    {
+        for (int i = 1; i < size; i++) {
+            float diff = phase[i] - phase[i-1];
+            if (diff > M_PI) {
+                phase[i] -= 2.0f * M_PI;
+            } else if (diff < -M_PI) {
+                phase[i] += 2.0f * M_PI;
+            }
+        }
+    }
 
 
 
@@ -259,12 +316,20 @@ protected:
     std::unique_ptr<juce::dsp::Complex<float>[]> outbufferBuffer;
     std::unique_ptr<juce::dsp::Complex<float>[]> timeoutbufferBuffer;
     float stochEnv [16384] = {0};
+    float stochphaseEnv [16384] = {0};
+    float stochCubicEnv [16384] = {0};
+    float stochCubicPhase [16384] = {0};
     float mX[16384] = {0};
+    float filterKernel[16384] = {0};
+    float filteredphase[16384] = {0};
+    float cubicfilteredPhase[16384] = {0};
+    float cutoff = 10;
      //======================================
     int numChannels;
     int numSamples;
     float stocfactor = 0.5;
     float randPhase = 0;
+    float previousPhase = 0;
     float decimation = 0;
     int fftSize;
     std::unique_ptr<juce::dsp::FFT> fft;
